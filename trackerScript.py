@@ -10,6 +10,8 @@ import time
 greenLower = (100,0, 0)
 greenUpper = (255,255,255)
 
+angle_step = 5
+
 blob_xy_pix = [[0,0]]
 blob_xy_real = [[0,0]]
 heading = [False]
@@ -21,8 +23,8 @@ speed = 15
 
 camera = cv2.VideoCapture(1)
 
-speed_min = 30
-speed_max = 40
+speed_min = 20
+speed_max = 35
 angle_step_max = 18
 error_old = 0
 error_new = 0
@@ -53,12 +55,12 @@ cv2.namedWindow("Frame")
 cv2.setMouseCallback("Frame", get_goal)
 goal_set = False
 
-orb = Sphero("C9:93:8F:F1:91:E2")
+#orb = Sphero("C9:93:8F:F1:91:E2")
+orb = Sphero("DA:06:00:55:3A:8D")
 orb.connect()
 print ("Connection 1 Established")
 print(orb.ping())
 time.sleep(2)
-
 
 
 while True:
@@ -108,7 +110,7 @@ while True:
 	#print(error)
 
 	
-	angle_step = 5
+	
 
 	if goal_set and error>5:
 		
@@ -132,33 +134,50 @@ while True:
 			pass
 
 		heading_vec = np.array(robot_xy_new)-np.array(robot_xy_old)
-		current_heading = np.arctan2(heading_vec[1],heading_vec[0]) * 180 / np.pi
+		current_heading = int(np.arctan2(heading_vec[1],heading_vec[0]) * 180 / np.pi)
 
 		if current_heading<0:
 			current_heading += 360
+		current_heading = current_heading % 360
 
 		goal_vec = np.array(goal)-np.array(robot_xy_new)
-		ang_to_goal = np.arctan2(goal_vec[1],goal_vec[0]) * 180 / np.pi
+		ang_to_goal = int(np.arctan2(goal_vec[1],goal_vec[0]) * 180 / np.pi)
 
 		if ang_to_goal<0:
 			ang_to_goal +=360
+		ang_to_goal = ang_to_goal % 360
 
 		# Angle step Controller
+
+		# Finds the minimum angle
 		ang_error = ang_to_goal - current_heading
+		ang_error =  ((ang_error-180)%360) + 180
+		ang_error = ang_error % 360
+
 		if ang_error <0:
 			ang_error = ang_error * -1
 
 		if ang_error >= 90:
 			angle_step = 8
 
-		elif ang_error > 50 and ang_error < 90 :
-			angle_step = 5
+		elif ang_error <= 5:
+			angle_step = 0
 
 		else:
+			angle_step = int(str(ang_error)[-1*len(str(ang_error))])
+
+		""" ang_error >= 50 and ang_error < 90 :
+			angle_step = 5
+
+		elif ang_error >=30 and ang_error < 50:
 			angle_step = 3
 
+		else:
+			angle_step = 0
+		"""
+
 		#angle_step = (ang_error/24)
-		print (ang_error)
+		#print (ang_error)
 
 		if angle_step > angle_step_max:
 			angle_step = angle_step_max
@@ -183,13 +202,14 @@ while True:
 		heading = heading % 360
 
 		#Speed Controller 
-		speed = (int(error)/100)*speed_max
+		speed = (int(error)/100)*speed_max - angle_step
+		
 		if speed > speed_max:
 			speed = speed_max
 		elif speed < speed_min:
 			speed = speed_min
-		#print (speed)
-
+		print(speed)
+		
 
 		#print (current_heading, " >>> ", heading_gain* (ang_to_goal -current_heading) )
 		#print (heading)
