@@ -18,10 +18,11 @@ s3 = Sphero("DC:F3:09:7B:4D:BB")
 
 class balls:
 	
-	def __init__(self,identifier,xy=[0,0],available = False):
+	def __init__(self,identifier,xy=[0,0],available = False, isMoving = False):
 		self.identifier = identifier
 		self.xy = xy
 		self.available = available
+		self.isMoving = isMoving
 		# We need the next line to iterate through all the class objects
 		robots.append(self)
 
@@ -38,6 +39,10 @@ class balls:
 	def roll(self,speed,orientation):
 		self.identifier.roll(speed,orientation)
 
+v1 = balls(s1)
+v2 = balls(s2)
+v3 = balls(s3)
+
 
 def updateBlob():
 	fetch = None
@@ -51,17 +56,12 @@ def updateBlob():
 			pass
 
 
-	
-
-
-v1 = balls(s1)
-v2 = balls(s2)
-v3 = balls(s3)
 
 #print(type(s1))
 #print(type(v1))
 #print(type(robots[0]))
 
+# Variables and Robots are same
 variables = [v1,v2,v3]
 initialized = False
 
@@ -82,12 +82,39 @@ def initialize():
 		variable.available = True
 		time.sleep(2)
 		updateBlob()
-		#variable.xy = list(x for x in blobs if x not in oldBlob)[0]
-		#print(variable," is at ",variable.xy)
+		variable.xy = list(x for x in blobs if x not in oldBlob)[0]
+		print(variable," is at ",variable.xy)
 		for robot in robots:
 			if (robot.available):
 				robot.keepIdle()
 	initialized = True
+
+def updatePosition(blob):
+	global robots
+	rob      = []
+	distance = []
+	for robot in robots:
+		if (robot.available):
+			dist = np.linalg.norm(np.array(robot.xy)-np.array(blob))
+			rob.append(robot)
+			distance.append(dist)
+
+	bot = rob[distance.index(min(distance))]
+	if (bot.xy == blob):
+		bot.isMoving = False
+		bot.keepIdle()
+		#print("Idle")
+	else:
+		bot.xy = blob
+		bot.isMoving = True
+		#print("Moving")
+
+	printStatement = ""
+	for robot in robots:
+		printStatement+=str(robot.xy)
+	print(printStatement)
+
+
 
 def robotMove(robot,speed,orientation):
 	global robots
@@ -102,12 +129,18 @@ while True:
 		initialize()
 		print ("Initialisation Sequence Complete")
 
-		for robot in robots:
-			_thread.start_new_thread( robotMove, (robot, 20, 0, ) )
-			#robotMove(robot,20,0)
-			
-		print("All Threads Done")
+	updateBlob()
+	for blob in blobs:
+		_thread.start_new_thread( updatePosition, (blob,))
 
+
+		#for robot in robots:
+		#	_thread.start_new_thread( robotMove, (robot, 20, 0, ))
+		
+			
+		#print("All Threads Done")
+
+	time.sleep(0.2)
 	key = cv2.waitKey(1) & 0xFF
 	if key == ord("q"):
 		break
