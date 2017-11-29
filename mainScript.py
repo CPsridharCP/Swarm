@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 
 robots = []
 blobs = []
+goals= [[30,30],[20,20],[55,80]]
+counter = 0
+costMatrix = np.empty([len(goals),len(robots)])
 
 s1 = Sphero("C9:93:8F:F1:91:E2")
 s2 = Sphero("DA:06:00:55:3A:8D")
@@ -18,11 +21,12 @@ s3 = Sphero("DC:F3:09:7B:4D:BB")
 
 class balls:
 	
-	def __init__(self,identifier,xy=[0,0],available = False, isMoving = False):
+	def __init__(self,identifier,xy=[0,0],available = False, isMoving = False, currentGoal = [0,0]):
 		self.identifier = identifier
 		self.xy = xy
 		self.available = available
 		self.isMoving = isMoving
+		self.currentGoal = currentGoal
 		# We need the next line to iterate through all the class objects
 		robots.append(self)
 
@@ -54,8 +58,6 @@ def updateBlob():
 				fetch = True
 		except:
 			pass
-
-
 
 #print(type(s1))
 #print(type(v1))
@@ -110,18 +112,25 @@ def updatePosition(blob):
 		#print("Moving")
 
 	printStatement = ""
-	for robot in robots:
-		printStatement+=str(robot.xy)
+	for i,robot in enumerate(robots):
+		printStatement+= "Robot "+str(i)+" at "+str(robot.xy) + " ; "
 	print(printStatement)
-
 
 
 def robotMove(robot,speed,orientation):
 	global robots
-	print("Thread Starts with ", robot)
 	robot.roll(int(speed),int(orientation))	
 	time.sleep(2)
 
+def allocateGoal(robot,i):
+	global counter,goals, costMatrix
+	for j,goal in enumerate(goals):
+		costMatrix[j,i] = (np.linalg.norm(np.array(robot.xy)-np.array(goal)))
+		counter+=1
+
+def getGoals():
+	global goals
+	goals= [[30,30],[20,20],[55,80]]
 
 while True:
 
@@ -133,11 +142,27 @@ while True:
 	for blob in blobs:
 		_thread.start_new_thread( updatePosition, (blob,))
 
+	getGoals()
+	costMatrix = np.empty([len(goals),len(robots)])
+	counter = 0
+	for i,robot in enumerate(robots):
+		_thread.start_new_thread( allocateGoal, (robot,i))
 
-		#for robot in robots:
-		#	_thread.start_new_thread( robotMove, (robot, 20, 0, ))
+	while counter< len(robots)*len(goals):
+		pass
+
+	for i in range(len(robots)):
+		theIndex = np.where(costMatrix[:,i] == np.min(costMatrix[:,i]))[0][0]
+		robots[i].currentGoal = goals[theIndex]
+		goals.pop(theIndex)
+		costMatrix = np.delete(costMatrix,(theIndex),axis=0)
 		
-			
+	printStatement = ""
+	for i,robot in enumerate(robots):
+		printStatement+= "Robot "+str(i)+" has goal "+str(robot.currentGoal) + " ; "
+	print(printStatement)
+		#for robot in robots:
+		#	_thread.start_new_thread( robotMove, (robot, 20, 0, ))		
 		#print("All Threads Done")
 
 	time.sleep(0.2)
