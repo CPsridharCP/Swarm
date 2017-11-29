@@ -36,12 +36,14 @@ while True:
 	frame = frame[int(1.3*height/10):int(9.1*height/10), int(1.75*width/10):int(7.6*width/10)]
 	blurred = cv2.GaussianBlur(frame, (15, 15), 0)
 	#hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-	kernel = np.ones((10,10),np.uint8)
+	
 	mask = cv2.inRange(blurred, greenLower, greenUpper)
 	#cv2.imshow("mask",mask)
+	kernel = np.ones((15,15),np.uint8)
 	mask = cv2.erode(mask, kernel, iterations=2)
 	#cv2.imshow("erode",mask)
-	mask = cv2.dilate(mask, kernel, iterations=2)
+	#kernel = np.ones((5,5),np.uint8)
+	#mask = cv2.dilate(mask, kernel, iterations=2)
 	cv2.imshow("dilate",mask)
 	cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)[-2]
 	#print ("cnts length", len(cnts))
@@ -66,7 +68,7 @@ while True:
 		if len(cnts) <= 0:
 			robot_positions =[]
 		pickle.dump(robot_positions, f)
-		print(robot_positions)
+		#print(robot_positions)
 
 		#print (blob_xy_real)
 	#print(robot_positions)
